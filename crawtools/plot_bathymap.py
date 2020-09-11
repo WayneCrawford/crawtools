@@ -2,73 +2,65 @@
 """
 Plot a bathymetry map like in GMT
 """
-import math
-from datetime import datetime
-
 import numpy as np
 from scipy.io import netcdf
 from matplotlib import pyplot as plt
-from mpl_toolkits.basemap import Basemap
+# from mpl_toolkits.basemap import Basemap
+import cartopy.crs as ccrs
+from cartopy.feature import NaturalEarthFeature
+from cartopy.feature import GSHHSFeature
 from pylab import gradient, sin, cos, arctan2, arctan, cm, pi, hypot
 
 # CONSTANTS
+NE_coast_resolutions = ['10m', '50m', '110m']
+GSHSS_coast_resolutions = ['auto', 'coarse', 'low', 'intermediate', 'high',
+                           'full']
 text_bbox = dict(boxstyle="round", pad=0.1, edgecolor='none',
                  facecolor='white', alpha=0.5)
 
 
-def plot_basemap(grid_x, grid_y, bounds, bathy_map, contour=1000, pastel=False, 
-                 zoom_shade=True, debug=True):
+class Bathymap():
     """
-    Set up map, plot coastlines (plus bathy if requested) and stations
-
-    :param grid_x: grid spacing in x direction
-    :param grid_y: grid spacing in y direction
-    :param bounds [list]: [minlon,maxlon,minlat,maxlat]
-    :param bathy_map [boolean]: True: use etopo bathy map
-                                False: no bathy map
-                                [str]:       filename of netcdf bathymetry file
-    :param pastel: lighten colors to make pastel
-    :param contour: contour spacing (m)
-    :param zoom_shade: calculate shading using only plotted part of bathy map
-    :returns: map object
+    Create a bathymetry map figure and axis
     """
+    def __init__(self, map_extent, bathy_map, grid_x=None, grid_y=None, ):
+        """
+        Set up a bathymetric map
 
-    if debug:
-        print("In plot_basemap()")
-    lon_min, lon_max, lat_min, lat_max = (bounds[0], bounds[1], bounds[2],
-                                          bounds[3])
-    # Plot coastlines
-    if debug:
-        print("Plotting coastlines")
-    m = _get_basemap_coastlines(lon_min, lat_min, lon_max, lat_max)
-    if debug:
-        print("Plotting parallels and meridians")
-    m.drawparallels(np.arange(math.floor(lat_min / grid_y) * grid_y,
-                              math.ceil(lat_max / grid_y) * grid_y, grid_y),
-                    labels=[1, 0, 0, 0])  # draw parallels
-    m.drawmeridians(np.arange(math.floor(lon_min / grid_x) * grid_x,
-                              math.ceil(lon_max / grid_x) * grid_x, grid_x),
-                    labels=[0, 0, 0, 1])  # draw meridians
+        :param map_extent [list]: [minlon,maxlon,minlat,maxlat]
+        :param bathy_map [str]: name of netcdf bathymetry file
+        :param grid_x: x-axis grid spacing
+        :param grid_y: y-axis grid spacing
+        """
+        self.map_extent = map_extent
+        self.bathy_map = bathy_map
+        self.lon, self.lat, self.z = self._setup_bathy_vars()
+        
+        # set up figure and axes
+        self.fig = plt.figure()
+        self.ax = plt.axes(projection=ccrs.Mercator())
+        self.ax.set_extent(self.map_extent)
+        if grid_x:
+            min_x = grid_x * np.floor(min(self.lon) / grid_x)
+            grid_x = np.arange(min_x, max(self.lon), grid_x)
+        if grid_y:
+            min_y = grid_y * np.floor(min(self.lat) / grid_y)
+            grid_y = np.arange(min_y, max(self.lat), grid_y)
+        self.ax.gridlines(xlocs=grid_x, ylocs=grid_y, draw_labels=True)
 
-    if not bathy_map:
-        pass
-    elif isinstance(bathy_map, str):
-        # Read in bathy data and make shaded version
-        if debug:
-            print(f'Plotting bathymetry map "{bathy_map}"')
-        f = netcdf.netcdf_file(bathy_map, 'r')
+
+    def _setup_bathy_vars(self):
+        """
+        Sets up bathymetric map variables
+        """
+        if not self.bathy_map:
+            return
+        f = netcdf.netcdf_file(self.bathy_map, 'r')
         if 'x' in f.variables:
-            if debug:
-                print(f'x = {f.variables["x"]}')
-                print(f'y = {f.variables["x"]}')
             lon = f.variables['x'][:].copy()
             lat = f.variables['y'][:].copy()
             z = f.variables['z'][:].copy()
         elif 'x_range' in f.variables:
-            if debug:
-                print(f'x_range = {f.variables["x_range"].data}')
-                print(f'y_range = {f.variables["y_range"].data}')
-                print(f'spacing = {f.variables["spacing"].data}')
             x_spacing, y_spacing = f.variables['spacing'].data
             lon = np.arange(f.variables['x_range'].data[0],
                             f.variables['x_range'].data[1] + x_spacing/2,
@@ -76,114 +68,114 @@ def plot_basemap(grid_x, grid_y, bounds, bathy_map, contour=1000, pastel=False,
             lat = np.arange(f.variables['y_range'][0],
                             f.variables['y_range'][1]+y_spacing/2,
                             y_spacing)
-            # z = np.flipud(np.reshape(f.variables['z'].data, ((len(lat),len(lon))))
-            z = np.flipud(np.array(f.variables['z'].data).reshape(len(lat),len(lon)))
-        [xx, yy] = np.meshgrid(lon, lat)
+            z = np.flipud(np.array(f.variables['z'].data).reshape(len(lat),
+                                                                  len(lon)))
         f.close()
-        # Get indices corresponding to map ranges (necessary because extent
-        # in imshow leaves an offset)
-        ixmin = np.flatnonzero((lon >= lon_min)).min()
-        ixmax = np.flatnonzero((lon <= lon_max)).max()
-        iymin = np.flatnonzero((lat >= lat_min)).min()
-        iymax = np.flatnonzero((lat <= lat_max)).max()
-        if debug:
-            print('z={}x{}, ixmin,max = {}, {}, iymin,max = {}, {}'.format(
-                len(z), len(z[0]), ixmin, ixmax, iymin, iymax), flush=True)
+        # Cut map down to desired range
+        ixmin = np.flatnonzero((lon >= self.map_extent[0])).min()
+        ixmax = np.flatnonzero((lon <= self.map_extent[1])).max()
+        iymin = np.flatnonzero((lat >= self.map_extent[2])).min()
+        iymax = np.flatnonzero((lat <= self.map_extent[3])).max()
+        return lon[ixmin:ixmax], lat[iymin:iymax], z[iymin:iymax, ixmin:ixmax]
+
+    def plot_image(self, pastel=False):
+        """
+        Plot the bathymetric image
+
+        :param pastel: lighten colors to make pastel
+        """
+        assert self.bathy_map, 'No bathy map provided!'
+
+        z_shade = _set_shade(self.z)
         if pastel:
-            im_mult, im_offset = 0.5, 0.5
-        else:
-            im_mult, im_offset = 1.0, 0.0
-        if zoom_shade:
-            z_shade = _set_shade(np.nan_to_num(z[iymin:iymax,ixmin:ixmax]),
-                                 cmap=cm.jet, scale=1.0, azdeg=90)
-            m.imshow(im_mult * z_shade + im_offset)
-            print(xx[ixmin:ixmax].shape)
-            m.contour(xx[iymin:iymax,ixmin:ixmax],
-                      yy[iymin:iymax,ixmin:ixmax],
-                      z[iymin:iymax,ixmin:ixmax],
-                      [-5000, -4000, -3000, -2000, -1000, -1],
-                      latlon=True, colors='k', linestyles='solid', linewidths=1)
-        else:
-            z_shade = _set_shade(np.nan_to_num(z),
-                                 cmap=cm.jet, scale=1.0, azdeg=90)
-            m.imshow(im_mult * z_shade[iymin:iymax, ixmin:ixmax] + im_offset)
-            m.contour(xx, yy, z, [-5000, -4000, -3000, -2000, -1000, -1],
-                      latlon=True, colors='k', linestyles='solid', linewidths=1)
-        m.fillcontinents()
-    else:
-        if debug:
-            print(f'Plotting etopo bathymetry map')
-        m.etopo()
-    m.drawcoastlines(linewidth=3.0, color="black")
-    # m.drawcountries()
+            z_shade = 0.5 * z_shade + 0.5
+        self.ax.imshow(z_shade, origin='uppper', extent=self.map_extent, transform=ccrs.PlateCarree())
 
-    return m
+    def plot_contours(self, levels=500, linewidth=1, color='k'):
+        """
+        Plot the bathymetric contours
 
+        :param levels: list of contours, or contour interval (m)
+        :param linewidth: contour linewidth (1)
+        :param colors: contour line color ('k')
+        """
+        assert self.bathy_map, 'No bathy map provided!'
 
-def plot_station(m, lon, lat, name='', sym='o', color='blue', ms=10, fs = 7,
-                 text_offset = 0.01, text_color='black'):
-    """
-    plot a station
-    
-    :param m: map object
-    :param lon: station longitude
-    :param lat: station latitude
-    :param name: station name
-    :param sym: station symbol
-    :param ms: station markersize
-    :param fs: fontsize
-    :param text_offset: offset of text from station (degrees)
-    :param text_color: text color
-    :returns: map object
-    """
-    m.plot(lon, lat, sym, color=color, markersize=ms, latlon=True)
-    if name:
-        x, y = m(lon + text_offset, lat)
-        plt.text(x, y, name, fontsize=fs, va='center', color=text_color)
-    return m
+        if not isinstance(levels, list):
+            interval = levels
+            min_level = interval * np.floor(np.amin(self.z)/interval)
+            levels = np.arange(min_level, np.amax(self.z), interval)
+        plt.contour(self.lon, self.lat, self.z,
+                    levels, 
+                    colors=color,
+                    linestyles='solid', linewidths=linewidth,
+                    transform=ccrs.PlateCarree())
 
-
-def _get_basemap_coastlines(lon_min, lat_min, lon_max, lat_max):
-    """
-    Get Basemap object at best available resolution
-    """
-    try:
-        m = Basemap(lon_min, lat_min, lon_max, lat_max, projection="merc",
-                    resolution='h')
-    except:
-        print('  mpl_toolkit Basemap high resolution coastline not found, '
-              'trying intermediate')
-        try:
-            m = Basemap(lon_min, lat_min, lon_max, lat_max, projection="merc",
-                        resolution='i')
-        except:
-            print('  mpl_toolkit Basemap intermediate resolution coastline '
-                  'not found, using low')
-            m = Basemap(lon_min, lat_min, lon_max, lat_max, projection="merc",
-                        resolution='l')
-    return m
-
-
-def save_map(filename, title, fontsize=12, show=False, debug=False):
-    """
-    Saves map to a file
-
-    :param filename:
-    :param title: plot title
-    :param timedelta_total: total time spent (datetime.timedelta)
-    :returns: figure object, base_name of output file
-    """
-    if debug:
-        print("In close_map()")
-    base_name = filename
-    plt.title(title, fontsize=fontsize)
-    fig1 = plt.gcf()    # Needed to save after "show" (which creates new fig)
-    if show:
+    def show(self):
+        """
+        Show the plot on the screen
+        """
         plt.show()
-    fig1.savefig(filename)
-    
-def _set_shade(a, intensity=None, cmap=cm.jet, scale=10.0, azdeg=165.0,
-              altdeg=45.0):
+
+    def plot_coastlines(self, resolution):
+        """
+        Plot coastlines
+
+        :param resolution: what resolution coastlines to include.  Must
+            correspond to a NaturalEarth resolution ('10m', '50m', '110m')
+            or a GSHSS resolution ('auto', 'low', 'high', 'full'...)
+        """
+        if resolution in GSHSS_coast_resolutions:
+            coast = GSHHSFeature(scale=resolution)
+            self.ax.add_feature(coast)
+        elif resolution in NE_coast_resolutions:
+            coast = NaturalEarthFeature(scale=resolution)
+            self.ax.add_feature(coast)
+            # self.ax.coastlines(resolution=resolution)
+        else:
+            print(f'Invalid coastline resolution: "{resolution}"')
+
+    def plot_station(self, lon, lat, name='', sym='o', color='blue',
+                     mec='k', ms=10, fs=7, text_offset=0.01,
+                     text_color='black', **kwargs):
+        """
+        plot a station
+
+        :param m: map object
+        :param lon: station longitude
+        :param lat: station latitude
+        :param name: station name
+        :param sym: station symbol
+        :param ms: station markersize
+        :param mec: marker edge color
+        :param fs: fontsize
+        :param text_offset: offset of text from station (degrees)
+        :param text_color: text color
+        :param kwargs: keyword arguments to pass on to the ax.plot()
+        """
+        self.ax.plot(lon, lat, sym, color=color, ms=ms, mec=mec,
+                     transform=ccrs.PlateCarree(),
+                     **kwargs)
+        if name:
+            self.ax.text(lon + text_offset, lat, name,
+                         fontsize=fs, va='center',
+                         color=text_color, transform=ccrs.PlateCarree())
+
+    def save_map(self, filename, title, fontsize=12):
+        """
+        Saves map to a file
+
+        :param filename:
+        :param title: plot title
+        :param timedelta_total: total time spent (datetime.timedelta)
+        :returns: figure object, base_name of output file
+        """
+        self.ax.set_title(title, fontsize=fontsize)
+        self.fig.savefig(filename)
+
+
+def _set_shade(a, intensity=None, cmap=cm.jet, scale=10.0,
+               azdeg=165.0, altdeg=45.0):
     '''
     sets shading for data array based on intensity layer or data value
 
@@ -243,4 +235,3 @@ def _hillshade(data, scale=10.0, azdeg=165.0, altdeg=45.0):
     intensity = (intensity - intensity.min())\
         / (intensity.max() - intensity.min())
     return intensity
-
