@@ -1,10 +1,10 @@
-from plot_bathymap import Bathymap
+from bathy_map import BathyMap
 
 gridx, gridy = 0.05, 0.05
 bounds = [-32.4, -32.2, 37.2, 37.4]
 bathy_file = '/Users/crawford/_Work/Figures_Etc/2_Maps/LuckyStrike/grd/LuckySISMOMAR_40mtr.grd'
 
-b = Bathymap(bounds, bathy_file, gridx, gridy)
+b = BathyMap(bounds, bathy_file, gridx, gridy)
 b.plot_image()
 b.plot_contours(500, linewidth=1)
 b.plot_contours(100, linewidth=0.5)

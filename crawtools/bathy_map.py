@@ -19,7 +19,7 @@ text_bbox = dict(boxstyle="round", pad=0.1, edgecolor='none',
                  facecolor='white', alpha=0.5)
 
 
-class Bathymap():
+class BathyMap():
     """
     Create a bathymetry map figure and axis
     """
