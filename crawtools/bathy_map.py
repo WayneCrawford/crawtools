@@ -1,22 +1,14 @@
 #!/usr/bin/env python3
 """
-Plot a bathymetry map like in GMT
+Class to plot GMT-like bathymetry maps
 """
 import numpy as np
 from scipy.io import netcdf
 from matplotlib import pyplot as plt
-# from mpl_toolkits.basemap import Basemap
 import cartopy.crs as ccrs
 from cartopy.feature import NaturalEarthFeature
 from cartopy.feature import GSHHSFeature
 from pylab import gradient, sin, cos, arctan2, arctan, cm, pi, hypot
-
-# CONSTANTS
-NE_coast_resolutions = ['10m', '50m', '110m']
-GSHSS_coast_resolutions = ['auto', 'coarse', 'low', 'intermediate', 'high',
-                           'full']
-text_bbox = dict(boxstyle="round", pad=0.1, edgecolor='none',
-                 facecolor='white', alpha=0.5)
 
 
 class BathyMap():
@@ -35,7 +27,7 @@ class BathyMap():
         self.map_extent = map_extent
         self.bathy_map = bathy_map
         self.lon, self.lat, self.z = self._setup_bathy_vars()
-        
+
         # set up figure and axes
         self.fig = plt.figure()
         self.ax = plt.axes(projection=ccrs.Mercator())
@@ -47,7 +39,6 @@ class BathyMap():
             min_y = grid_y * np.floor(min(self.lat) / grid_y)
             grid_y = np.arange(min_y, max(self.lat), grid_y)
         self.ax.gridlines(xlocs=grid_x, ylocs=grid_y, draw_labels=True)
-
 
     def _setup_bathy_vars(self):
         """
@@ -89,7 +80,8 @@ class BathyMap():
         z_shade = _set_shade(self.z)
         if pastel:
             z_shade = 0.5 * z_shade + 0.5
-        self.ax.imshow(z_shade, origin='uppper', extent=self.map_extent, transform=ccrs.PlateCarree())
+        self.ax.imshow(z_shade, origin='uppper', extent=self.map_extent,
+                       transform=ccrs.PlateCarree())
 
     def plot_contours(self, levels=500, linewidth=1, color='k'):
         """
@@ -106,8 +98,7 @@ class BathyMap():
             min_level = interval * np.floor(np.amin(self.z)/interval)
             levels = np.arange(min_level, np.amax(self.z), interval)
         plt.contour(self.lon, self.lat, self.z,
-                    levels, 
-                    colors=color,
+                    levels, colors=color,
                     linestyles='solid', linewidths=linewidth,
                     transform=ccrs.PlateCarree())
 
@@ -125,6 +116,10 @@ class BathyMap():
             correspond to a NaturalEarth resolution ('10m', '50m', '110m')
             or a GSHSS resolution ('auto', 'low', 'high', 'full'...)
         """
+        NE_coast_resolutions = ['10m', '50m', '110m']
+        GSHSS_coast_resolutions = ['auto', 'coarse', 'low',
+                                   'intermediate', 'high',
+                                   'full']
         if resolution in GSHSS_coast_resolutions:
             coast = GSHHSFeature(scale=resolution)
             self.ax.add_feature(coast)
@@ -135,9 +130,10 @@ class BathyMap():
         else:
             print(f'Invalid coastline resolution: "{resolution}"')
 
-    def plot_station(self, lon, lat, name='', sym='o', color='blue',
-                     mec='k', ms=10, fs=7, text_offset=0.01,
-                     text_color='black', **kwargs):
+    def plot_station(self, lon, lat, name='', sym='o', color='deepskyblue',
+                     mec='k', ms=8, fs=7, text_offset=0.01,
+                     text_color='black', text_box=True,
+                     **kwargs):
         """
         plot a station
 
@@ -151,14 +147,19 @@ class BathyMap():
         :param fs: fontsize
         :param text_offset: offset of text from station (degrees)
         :param text_color: text color
+        :param text_box: Put a box around the text
         :param kwargs: keyword arguments to pass on to the ax.plot()
         """
         self.ax.plot(lon, lat, sym, color=color, ms=ms, mec=mec,
                      transform=ccrs.PlateCarree(),
                      **kwargs)
         if name:
+            bbox = None
+            if text_box:
+                bbox = dict(boxstyle="round", pad=0.1, edgecolor='none',
+                            facecolor='white', alpha=0.5)
             self.ax.text(lon + text_offset, lat, name,
-                         fontsize=fs, va='center',
+                         fontsize=fs, va='center', bbox=bbox,
                          color=text_color, transform=ccrs.PlateCarree())
 
     def save_map(self, filename, title, fontsize=12):
@@ -174,8 +175,7 @@ class BathyMap():
         self.fig.savefig(filename)
 
 
-def _set_shade(a, intensity=None, cmap=cm.jet, scale=10.0,
-               azdeg=165.0, altdeg=45.0):
+def _set_shade(a, intensity=None, cmap=cm.jet, **kwargs):
     '''
     sets shading for data array based on intensity layer or data value
 
@@ -197,7 +197,7 @@ def _set_shade(a, intensity=None, cmap=cm.jet, scale=10.0,
     '''
     if intensity is None:
         # hilshading the data
-        intensity = _hillshade(a, scale=scale, azdeg=azdeg, altdeg=altdeg)
+        intensity = _hillshade(a, **kwargs)
     else:
         # or normalize the intensity
         intensity = (intensity - intensity.min())\
