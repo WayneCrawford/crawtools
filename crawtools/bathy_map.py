@@ -15,19 +15,27 @@ class BathyMap():
     """
     Create a bathymetry map figure and axis
     """
-    def __init__(self, map_extent, bathy_map, grid_x=None, grid_y=None, ):
+    def __init__(self, map_extent, bathy_file,
+                 grid_x=None, grid_y=None, intens_file=None):
         """
         Set up a bathymetric map
 
         :param map_extent [list]: [minlon,maxlon,minlat,maxlat]
-        :param bathy_map [str]: name of netcdf bathymetry file
-        :param grid_x: x-axis grid spacing
-        :param grid_y: y-axis grid spacing
+        :param bathy_file [str]: name of netcdf bathymetry file
+        :param intens_file: name of netcdf intensity file
+        :kind intens_file: str, optional
+        :param grid_x: x grid spacing for the plot axis
+        :param grid_y: y grid spacing for the plot axis
         """
         self.map_extent = map_extent
-        self.bathy_map = bathy_map
-        self.lon, self.lat, self.z = self._setup_bathy_vars()
-
+        # self.lon, self.lat, self.z = self._setup_bathy_vars()
+        self.lon, self.lat, self.z = self._read_bathy_map(bathy_file)
+        self.intens = None
+        if intens_file:
+            lon, lat, intens = self._read_bathy_map(intens_file)
+            if lon==self.lon and lat==self.lat:
+                self.intens = intens
+                
         # set up figure and axes
         self.fig = plt.figure()
         self.ax = plt.axes(projection=ccrs.Mercator())
@@ -38,15 +46,17 @@ class BathyMap():
         if grid_y:
             min_y = grid_y * np.floor(min(self.lat) / grid_y)
             grid_y = np.arange(min_y, max(self.lat), grid_y)
-        self.ax.gridlines(xlocs=grid_x, ylocs=grid_y, draw_labels=True)
+        gl = self.ax.gridlines(xlocs=grid_x, ylocs=grid_y, draw_labels=True)
+        gl.top_labels = False
+        gl.right_labels = False
 
-    def _setup_bathy_vars(self):
+    def _read_bathy_map(self, fname):
         """
-        Sets up bathymetric map variables
+        Read netcdf grid file
+        
+        :param fname: filename
         """
-        if not self.bathy_map:
-            return
-        f = netcdf.netcdf_file(self.bathy_map, 'r')
+        f = netcdf.netcdf_file(fname, 'r')
         if 'x' in f.variables:
             lon = f.variables['x'][:].copy()
             lat = f.variables['y'][:].copy()
@@ -69,18 +79,48 @@ class BathyMap():
         iymax = np.flatnonzero((lat <= self.map_extent[3])).max()
         return lon[ixmin:ixmax], lat[iymin:iymax], z[iymin:iymax, ixmin:ixmax]
 
+    # def _setup_bathy_vars(self):
+    #     """
+    #     Sets up bathymetric map variables
+    #     """
+    #     if not self.bathy_file:
+    #         return
+    #     f = netcdf.netcdf_file(self.bathy_map, 'r')
+    #     if 'x' in f.variables:
+    #         lon = f.variables['x'][:].copy()
+    #         lat = f.variables['y'][:].copy()
+    #         z = f.variables['z'][:].copy()
+    #     elif 'x_range' in f.variables:
+    #         x_spacing, y_spacing = f.variables['spacing'].data
+    #         lon = np.arange(f.variables['x_range'].data[0],
+    #                         f.variables['x_range'].data[1] + x_spacing/2,
+    #                         x_spacing)
+    #         lat = np.arange(f.variables['y_range'][0],
+    #                         f.variables['y_range'][1]+y_spacing/2,
+    #                         y_spacing)
+    #         z = np.flipud(np.array(f.variables['z'].data).reshape(len(lat),
+    #                                                               len(lon)))
+    #     f.close()
+    #     # Cut map down to desired range
+    #     ixmin = np.flatnonzero((lon >= self.map_extent[0])).min()
+    #     ixmax = np.flatnonzero((lon <= self.map_extent[1])).max()
+    #     iymin = np.flatnonzero((lat >= self.map_extent[2])).min()
+    #     iymax = np.flatnonzero((lat <= self.map_extent[3])).max()
+    #     return lon[ixmin:ixmax], lat[iymin:iymax], z[iymin:iymax, ixmin:ixmax]
+
     def plot_image(self, pastel=False):
         """
         Plot the bathymetric image
 
         :param pastel: lighten colors to make pastel
         """
-        assert self.bathy_map, 'No bathy map provided!'
-
-        z_shade = _set_shade(self.z)
+        if self.intens:
+            z_shade = _set_shade(self.z, self.intens)
+        else:
+            z_shade = _set_shade(self.z)
         if pastel:
             z_shade = 0.5 * z_shade + 0.5
-        self.ax.imshow(z_shade, origin='uppper', extent=self.map_extent,
+        self.ax.imshow(z_shade, origin='lower', extent=self.map_extent,
                        transform=ccrs.PlateCarree())
 
     def plot_contours(self, levels=500, linewidth=1, color='k'):
@@ -91,8 +131,6 @@ class BathyMap():
         :param linewidth: contour linewidth (1)
         :param colors: contour line color ('k')
         """
-        assert self.bathy_map, 'No bathy map provided!'
-
         if not isinstance(levels, list):
             interval = levels
             min_level = interval * np.floor(np.amin(self.z)/interval)

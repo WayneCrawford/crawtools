@@ -1,4 +1,4 @@
-from bathy_map import BathyMap
+from crawtools.bathy_map import BathyMap
 
 gridx, gridy = 0.05, 0.05
 bounds = [-32.4, -32.2, 37.2, 37.4]
