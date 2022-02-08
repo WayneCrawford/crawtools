@@ -3,14 +3,13 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-# version = {}
-# with open("seaplan/version.py") as fp:
-#     exec(fp.read(), version)
+version = {}
+with open("crawtools/version.py") as fp:
+    exec(fp.read(), version)
 
 setuptools.setup(
     name="crawtools",
-    version='0.0',
-    # version=version['__version__'],
+    version=version['__version__'],
     author="Wayne Crawford",
     author_email="crawford@ipgp.fr",
     description="Various python modules",
@@ -25,13 +24,13 @@ setuptools.setup(
           'matplotlib>=3.0',
           'obspy>=1.0'
       ],
-    # entry_points={
-    #      'console_scripts': [
-    #          'seaplan=seaplan.sea_plan:main',
-    #          'seaplan-validate=seaplan.validate_json:_console_script'
-    #      ]
-    # },
-    python_requires='>=3.6',
+    entry_points={
+         'console_scripts': [
+             'driftplot=crawtools.driftplot:main',
+             'driftcorrect=crawtools.driftcorrect:main'
+         ]
+    },
+    python_requires='>=3.7',
     classifiers=(
         "Development Status :: 4 - Beta",
         "Environment :: Console",

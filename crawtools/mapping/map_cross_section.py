@@ -1,18 +1,31 @@
+"""
+Class to create map and two cross-sections, all with no vertical exageration
+
+Currently returns three axes, to which one needs to plot using any Axes
+routine.
+
+Would be nice if you could use pseudo-routines with z in addition to x and y,
+then the class would dispatch the appropriate coordinates to the different
+Axis routines
+"""
 import cartopy.crs as ccrs
-from cartopy.feature import NaturalEarthFeature
+# from cartopy.feature import NaturalEarthFeature
 from cartopy.feature import GSHHSFeature
 import matplotlib.pylab as plt
 import numpy as np
 
 NE_coast_resolutions = ['10m', '50m', '110m']
-GSHSS_coast_resolutions = ['auto', 'coarse', 'low', 'intermediate', 'high', 'full']
+GSHSS_coast_resolutions = ['auto', 'coarse', 'low', 'intermediate', 'high',
+                           'full']
+
 
 class MapCrossSection():
     """
     Create axes map with cross-sections to right (east) and below (south)
 
-    ax_map is a Mercator projection, when you plot to it you must
-        specify transform=cartopy.crs.Geodetic()
+    the axis attributes to use are .ax_map, .ax_xz and .ax_zy
+    .ax_map is a Mercator projection, when you plot to it you must
+        specify transform=cartopy.crs.PlateCarree()
     """
     def __init__(self, figsize=None, fill_figure=True, pad_left=0.6,
                  pad_right=0.6, pad_top=0.4, pad_bottom=0.4,
@@ -51,17 +64,17 @@ class MapCrossSection():
         self.pad_right = pad_right
         self.pad_top = pad_top
         self.pad_bottom = pad_bottom
-        
+
         self.coastlines = None
         if coastlines is not None:
             if ((coastlines in NE_coast_resolutions)
-                or (coastlines in GSHSS_coast_resolutions)):
-                    self.coastlines=coastlines
+                    or (coastlines in GSHSS_coast_resolutions)):
+                self.coastlines = coastlines
             else:
                 print(f'Invalid coastlines string: "{coastlines}"')
 
-        fig = plt.figure(figsize)
-        rect_map, rect_xz, rect_zy = self._make_rects(fig, fill_figure)
+        self.fig = plt.figure(figsize)
+        rect_map, rect_xz, rect_zy = self._make_rects(fill_figure)
 
         # Setup Lat-Z axis (lower left)
         self.ax_xz = plt.axes(rect_xz,
@@ -82,7 +95,8 @@ class MapCrossSection():
         self.ax_map.set_extent(self.map_extent)
         if self.coastlines in GSHSS_coast_resolutions:
             coast = GSHHSFeature(scale=self.coastlines)
-            feature = self.ax_map.add_feature(coast)
+            self.ax_map.add_feature(coast)
+            # feature = self.ax_map.add_feature(coast)
         elif self.coastlines in NE_coast_resolutions:
             self.ax_map.coastlines(resolution='10m')
         gl = self.ax_map.gridlines(draw_labels=True)
@@ -204,19 +218,18 @@ class MapCrossSection():
 
     def _make_figure(self, figsize):
         fig = plt.figure(figsize)
-        fig_inches = fig.get_size_inches()
-        fig_xrange = fig_inches[0] - self.pad_left - self.pad_right
-        fig_yrange = fig_inches[1] - self.pad_top - self.pad_bottom
-        return fig, fig_aspect
+        # fig_inches = fig.get_size_inches()
+        # fig_xrange = fig_inches[0] - self.pad_left - self.pad_right
+        # fig_yrange = fig_inches[1] - self.pad_top - self.pad_bottom
+        return fig
 
-    def _make_rects(self, fig, fill_figure):
+    def _make_rects(self, fill_figure):
         """
         Make rectangles for the three axes
-        
-        :param fig: figure to make rects in
+
         :param fill_figure: if true, extend map bounds to fill figure
         """
-        fig_inches_x, fig_inches_y = fig.get_size_inches()
+        fig_inches_x, fig_inches_y = self.fig.get_size_inches()
         fig_xrange = fig_inches_x - self.pad_left - self.pad_right
         fig_yrange = fig_inches_y - self.pad_top - self.pad_bottom
         fig_aspect = fig_xrange / fig_yrange
@@ -224,7 +237,7 @@ class MapCrossSection():
         if fill_figure:
             # Expand map extent to fill figure
             self._adjustminmax(fig_aspect)
-        
+
         inch_per_km_x = fig_xrange / self.xrange_km
         inch_per_km_y = fig_yrange / self.yrange_km
         if self.plot_aspect > fig_aspect:
@@ -237,7 +250,7 @@ class MapCrossSection():
         right_width = self.depthrange * inch_per_km_x / fig_inches_x
         lower_height = self.depthrange * inch_per_km_y / fig_inches_y
         upper_height = self.latrange_km * inch_per_km_y / fig_inches_y
-        
+
         left_left = self.pad_left / fig_inches_x
         right_left = left_left + left_width
         lower_bottom = self.pad_bottom / fig_inches_y
@@ -257,7 +270,7 @@ if __name__ == "__main__":
         for fill_fig in [False, True]:
             mcs = MapCrossSection(map_extent=map_extent, depth_extent=[0, 50],
                                   fill_figure=fill_fig)
-            mcs.ax_map.plot(pt[0], pt[1], '+', transform=ccrs.Geodetic())
+            mcs.ax_map.plot(pt[0], pt[1], '+', transform=ccrs.PlateCarree())
             mcs.ax_xz.plot(pt[0], pt[2], '+')
             mcs.ax_zy.plot(pt[2], pt[1], '+')
             plt.show()
