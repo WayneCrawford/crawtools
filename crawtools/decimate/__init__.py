@@ -1,4 +1,6 @@
 """
+Probably obsoleted by tiskitpy.Decimator
+
 Decimate seismological data using SAC FIR Filters
 
 There are two main methods:

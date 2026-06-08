@@ -16,6 +16,7 @@ from .utils import choose_window_scipy, choose_window_mlab, seed_code
 
 # Set variables
 spect_library = 'scipy'  # 'mlab' or 'scipy': mlab gives weird coherences!
+use_PSDs = True
 
 
 class PSD:

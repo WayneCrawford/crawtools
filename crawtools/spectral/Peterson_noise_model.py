@@ -50,7 +50,7 @@ def PetersonNoiseModel(periods, as_freqs=False):
 
     returns the acceleration noise models in dB ref to 1 (m/s^2)^2/Hz
 
-    :param periods: periods to use (should be increasing)
+    :param periods: periods to use (should be increasing).
     :type freqs: list
     :param as_freqs: interpret "periods" as frequencies instead
     :type as_freqs: bool, opt

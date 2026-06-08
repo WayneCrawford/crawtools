@@ -1,0 +1,15 @@
+PiLAB S26D is a good example of strong tilt and compliance signals that can be
+removed (can compliance signal be removed?  I have a note that suggests
+it can't).  It also seems to have a non-flat tilt transfer function, could be
+used to look at the effect of different transfer functions on different components.
+
+S03D and S06D don't look good, can reduce tilt but don't see any compliance effect
+
+Use S26D to compare rotation with transfer function.  Also look at rotation
+to dominant horizontal angle: is this the same angle throughout the expt?
+
+Second order tilt noise calculation?
+
+Z-Horiz transfer functions
+Flat: S31D, S17D?, S10D?, S06D, S03D?
+Non-flat: S38D, S29D, S26D, S22D

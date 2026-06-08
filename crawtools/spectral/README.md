@@ -22,3 +22,9 @@
   matplotlib.cohere or scipy.signal.coherence().  I don't know if there is
   any use not that we have `SpectralDensity`
 - `utils.py`: contains some functions used by `PSD.py`?
+
+## Remaining questions
+- Is removing the transfer function times the spectrum really accurate?  It 
+  seems that it would be more honest to remove the transfer function times
+  each FFT.  In TiSKit, I started with the raw data and recalculated the
+  spectra for every newly added transfer function (so applying to each FFT)
