@@ -35,7 +35,7 @@ class Sensor():
         self.input_units = input_units
         # Use 'm/s' as input units because obspy doesn't know Pa
         self.response = PZStage(1, gain, gain_freq, 'm/s', 'V',
-                                'LAPLACE (RADIANS/SECOND)', 0.,
+                                'LAPLACE (RADIANS/SECOND)', gain_freq,
                                 zeros, poles)
         for testee in (self_noise, clip_level):
             if testee is not None:

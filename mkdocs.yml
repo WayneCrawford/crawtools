@@ -1,4 +1,5 @@
-site_name: My Project
+site_name: crawtools
+site_url: https://crawtools.readthedocs.org
 
 theme:
   name: material
@@ -19,5 +20,12 @@ plugins:
             separate_signature: true
 
 nav:
+  - Home: index.md
   - API:
-      - api.md
+    - Instruments: api/instruments.md
+    - Clock Drift: api/clockdrift.md
+    - Compliance: api/compliance
+    - FDSN: api/fdsn
+    - Mapping: api/mapping
+    - Rotation Seismometer: api/rotation_seismometer
+    - Webb Data File: api/webb_data_file
