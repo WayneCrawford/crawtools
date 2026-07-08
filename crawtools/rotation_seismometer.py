@@ -3,15 +3,6 @@ Functions to convert rotation to horizotal seismometer signals, and vice versa,
 assuming only rotation through the gravitational field
 
 Currently uses small-angle theory, simply multiplying radians by the gravitational attraction.
-
-
-Functions are:
-- `rotation_to_motion` convert a rotation signal to a motion signal
-- `motion_to_rotation` inverse of the above
-- `convert_rotation`: convert rotation from one units to another
-- `convert_motion`: convert motion from one units to another
-- `to_rads`: convert rotation units to radians
-- `from_rads`: convert rotation units from radians
 """
 import numpy as np
 
