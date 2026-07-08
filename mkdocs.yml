@@ -3,6 +3,10 @@ site_url: https://crawtools.readthedocs.org
 
 theme:
   name: readthedocs
+  highlightjs: true
+  hljs_languages:
+    - python
+    - yaml
 
 plugins:
   - search
@@ -20,7 +24,7 @@ plugins:
 
 nav:
   - Home: index.md
-  - API:
+  - API Reference:
     - Instruments: api/instruments.md
     - Clock Drift: api/clockdrift.md
     - Compliance: api/compliance
