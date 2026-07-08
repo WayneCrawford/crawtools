@@ -13,11 +13,10 @@ plugins:
             - crawtools
           options:
             docstring_style: google
-            show_source: false
-            show_root_heading: true
-            show_root_full_path: false
+            show_source: true
             show_signature_annotations: true
             separate_signature: true
+            show_root_heading: true
 
 nav:
   - Home: index.md
