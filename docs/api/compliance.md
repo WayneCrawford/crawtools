@@ -1,4 +1,6 @@
-# API Reference
+# crawtools.compliance
+
+This module **may be made obsolete** by tiskitpy.Compliance
 
 ::: crawtools.compliance.compliance_functions
 ::: crawtools.compliance.compliance_noise
