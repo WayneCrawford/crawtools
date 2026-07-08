@@ -2,7 +2,7 @@ site_name: crawtools
 site_url: https://crawtools.readthedocs.org
 
 theme:
-  name: material
+  name: readthedocs
 
 plugins:
   - search

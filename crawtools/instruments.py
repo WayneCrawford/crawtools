@@ -18,7 +18,7 @@ coeff_args = {'decimation_input_sample_rate': 125,
 
 class Sensor():
     def __init__(self, gain, zeros=[], poles=[], input_units='m/s',
-                 self_noise=None, clip_level=None, gain_freq=10.,
+                 self_noise=None, clip_level=None, gain_freq=10., norm_freq=1.,
                  comments=''):
         """
         Args:
@@ -28,14 +28,15 @@ class Sensor():
             input_units (str): 'm/s' or 'Pa'
             self_noise (list): [[freqs],[vals]], vals in dB ref 1 (m/s^2 or Pa)^2/Hz
             clip_level (list): [[freqs],[vals]], vals in m/s^2 or Pa
-            norm_freq (float): normalization and gain reference frequency (Hz)
+            gain_freq (float): gain reference frequency (Hz)
+            norm_freq (float): normalization frequency (Hz)
             comments (str): notes on the values provided
         """
         assert input_units in ['m/s', 'Pa']
         self.input_units = input_units
         # Use 'm/s' as input units because obspy doesn't know Pa
         self.response = PZStage(1, gain, gain_freq, 'm/s', 'V',
-                                'LAPLACE (RADIANS/SECOND)', gain_freq,
+                                'LAPLACE (RADIANS/SECOND)', norm_freq,
                                 zeros, poles)
         for testee in (self_noise, clip_level):
             if testee is not None:
@@ -68,19 +69,19 @@ class Preamplifier():
 
 
 class Logger():
-    def __init__(self, count_range, volt_range, dynamic_range_dB):
+    def __init__(self, fs_counts, fs_volts, dynamic_range_dB):
         """
         Args:
-            count_range (float): total count range ()
-            volt_range (float): total volts corresponding to total counts ()
+            fs_counts (float): Full-scale amplitude (total counts/2 for a signed A/D)
+            fs_volts (float): Volts at the full-scale amplitude
             dynamic_range_dB (float): dynamic range in decibels
         """
-        gain = count_range / volt_range
+        gain = fs_counts / fs_volts
         self.response = CoeffStage(3, gain, 1, 'V', 'count', 'DIGITAL',
                                    numerator=[], denominator=[], **coeff_args)
         # min and max values in counts
-        self.max_counts = count_range
-        self.min_counts = count_range / np.power(10., dynamic_range_dB/20)
+        self.max_counts = fs_counts
+        self.min_counts = fs_counts / np.power(10., dynamic_range_dB/20)
 
     def __str__(self):
         return ("Logger: \n"
@@ -134,6 +135,14 @@ class Instrument():
         # return self.logger.min_counts / self.evalresp(frequencies)
         return  (self.logger.min_counts/self.logger.max_counts) * self.max_values(frequencies)
 
+    def max_dBs(self, frequencies, divisor=3.46):
+        # divisor = sqrt(12) is for sine wave inputs(?)
+        return 20*np.log10(np.abs(self.max_values(frequencies)/divisor))
+
+    def min_dBs(self, frequencies, divisor=3.46):
+        # divisor = sqrt(12) is for sine wave inputs(?)
+        return 20*np.log10(np.abs(self.min_values(frequencies)/divisor))
+
     def evalresp(self, frequencies):
         """ in counts/pa or counts/m/s^2 """
         if self.sensor.input_units.lower() == 'pa':
@@ -144,7 +153,11 @@ class Instrument():
     def plot_minmax(self, frequencies, color='b', plot_sense='f', show=True, ax=None,
                     label='range', ls = '-', alpha=0.05):
         """
-        Plot the minimum and maximum sensitivity levels for an Instrument.
+        Plot the minimum and maximum PSD levels for an Instrument.
+        
+        This cannot be accurate because the PSD level depends on the variance,
+        not the maximum value.  For example, a full-scale sine wave will have
+        much less variance than randomly selected values in the full-scale range.
         
         If the sensor has a:
             - clip level, it will be plotted as a thick solid line
@@ -176,14 +189,14 @@ class Instrument():
             raise ValueError(f"{plot_sense=} doesn't start with an 'f' or a 'p'")
 
         ax.semilogx(x_values,
-                    20*np.log10(np.abs(self.min_values(frequencies))),
+                    self.min_dBs(frequencies),
                     color=color, label=label, ls=ls)
         ax.semilogx(x_values, 
-                    20*np.log10(np.abs(self.max_values(frequencies))),
+                    self.max_dBs(frequencies),
                     color=color, ls=ls)
         ax.fill_between(x_values,
-                        20*np.log10(np.abs(self.min_values(frequencies))),
-                        20*np.log10(np.abs(self.max_values(frequencies))),
+                        self.min_dBs(frequencies),
+                        self.max_dBs(frequencies),
                         alpha=alpha, color=color)
         if self.sensor.clip_level is not None:
             arr = self.sensor.clip_level
