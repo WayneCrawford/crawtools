@@ -60,7 +60,7 @@ def _get_args():
                              +', '.join(formats)
                              + ". (default: %(default)s)")
     parser.add_argument("-b", "--bounds", nargs=4,
-                        metavar=('minlat', 'maxlat', 'minlon', 'maxlon)
+                        metavar=('minlat', 'maxlat', 'minlon', 'maxlon'),
                         help="Set latitude/longitude bounds")
     parser.add_argument("-n", "--network", type=str, default=None,
                         help="Limit to the named network")
