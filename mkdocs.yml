@@ -27,8 +27,8 @@ nav:
   - API Reference:
     - Instruments: api/instruments.md
     - Clock Drift: api/clockdrift.md
-    - Compliance: api/compliance
-    - FDSN: api/fdsn
-    - Mapping: api/mapping
-    - Rotation Seismometer: api/rotation_seismometer
-    - Webb Data File: api/webb_data_file
+    - Compliance: api/compliance.md
+    - FDSN: api/fdsn.md
+    - Mapping: api/mapping.md
+    - Rotation Seismometer: api/rotation_seismometer.md
+    - Webb Data File: api/webb_data_file.md
