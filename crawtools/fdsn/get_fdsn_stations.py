@@ -3,6 +3,9 @@
 """
 Download and save stations from IRIS PiLAB
 
+Command-line function: for details type `pytho get_fdsn_stations.py -h`
+
+
 :author: Wayne Crawford (crawford@ipgp.fr), 2019
 :requires: obspy>=1.1
 """
@@ -45,7 +48,7 @@ def _get_args():
     """
     formats = [x for x in formats_suffixes.keys()]
     levels = ['network', 'station', 'channel', 'response']
-    
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("start_time", type=_to_UTCDateTime,
                         help='Start time (YYYY-MM-DD)')
@@ -53,11 +56,11 @@ def _get_args():
                         help='End time (YYYY-MM-DD)')
     parser.add_argument("-o", "--outfile", help="Output file name")
     parser.add_argument("-c", "--client", default="IRIS",
-                        help='Client (%defaults)s')
+                        help='Client (default: %(default)s)')
     parser.add_argument("-f", "--format", default='STATIONXML', metavar='',
                         choices=formats,
                         help='Output file format.  Allowed values are '
-                             +', '.join(formats)
+                             + ', '.join(formats)
                              + ". (default: %(default)s)")
     parser.add_argument("-b", "--bounds", nargs=4,
                         metavar=('minlat', 'maxlat', 'minlon', 'maxlon'),
@@ -67,8 +70,8 @@ def _get_args():
     parser.add_argument("-d", "--level", default='response', metavar="",
                         choices=levels,
                         help="Limit to given level.  Allowed values are "
-                             +", ".join(levels)
-                             +". (default: %(default)s)")
+                             + ", ".join(levels)
+                             + ". (default: %(default)s)")
     parser.add_argument("-p", "--plot", action="store_true",
                         help="Plot stations to file")
     parser.add_argument("-v", "--verbose", action="store_true",

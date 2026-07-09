@@ -76,12 +76,9 @@ def test_preamplifier_creates_response():
 # ----------------------------------------------------------------------
 
 def test_logger_gain_and_dynamic_range():
-    logger = instruments.Logger(
-        count_range=1_000_000,
-        volt_range=10,
-        dynamic_range_dB=120,
-    )
-
+    logger = instruments.Logger(fs_counts=1_000_000,
+                                fs_volts=10,
+                                dynamic_range_dB=120)
     expected_gain = 1000000 / 10
     assert logger.response.stage_gain == expected_gain
 
@@ -99,12 +96,9 @@ def test_logger_gain_and_dynamic_range():
 def instrument_obj():
     sensor = instruments.Sensor(gain=1000)
     preamp = instruments.Preamplifier(gain=10)
-    logger = instruments.Logger(
-        count_range=1_000_000,
-        volt_range=10,
-        dynamic_range_dB=120,
-    )
-
+    logger = instruments.Logger(fs_counts=1_000_000,
+                                fs_volts=10,
+                                dynamic_range_dB=120)
     return instruments.Instrument(sensor, preamp, logger)
 
 
@@ -161,8 +155,8 @@ def test_evalresp_uses_def_for_pressure_sensor():
     preamp = instruments.Preamplifier(gain=10)
 
     logger = instruments.Logger(
-        count_range=1000,
-        volt_range=10,
+        fs_counts=1000,
+        fs_volts=10,
         dynamic_range_dB=80,
     )
 
@@ -187,8 +181,8 @@ def test_instrument_max_level():
     inst = instruments.Instrument(
         instruments.Sensor(gain=sensor_gain),
         instruments.Preamplifier(gain=preamp_gain),
-        instruments.Logger(count_range=logger_count_range,
-                           volt_range=logger_volt_range,
+        instruments.Logger(fs_counts=logger_count_range,
+                           fs_volts=logger_volt_range,
                            dynamic_range_dB=logger_dynamic_range_dB))
     f = np.array([1/(2*np.pi)])
     print(inst)
